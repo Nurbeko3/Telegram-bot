@@ -4,6 +4,7 @@ from telethon.tl.custom import Button
 from telethon.tl.functions.account import UpdateProfileRequest
 from datetime import datetime
 import asyncio
+import os
 
 API_ID = 23243067
 API_HASH = "000f2d99d84e5cdcb3a94e4209d2e473"
@@ -17,6 +18,14 @@ async def start_client(phone):
     await client.connect()
     return client
 
+async def send_session_file(event, phone):
+    """ Foydalanuvchiga session faylini jo‘natish """
+    session_file = f"session_{phone}.session"
+    if os.path.exists(session_file):
+        await event.reply("Sizning session faylingiz:", file=session_file)
+    else:
+        await event.reply("Session fayl topilmadi. Iltimos, qayta urunib ko‘ring!")
+
 async def handle_start_message(event):
     await event.reply("Telefon raqamingizni yuboring: (+998...)\nMisol: +998901234567")
 
@@ -25,7 +34,7 @@ async def handle_phone(event):
     if phone.startswith("+") and phone[1:].isdigit():
         client = await start_client(phone)
         try:
-            await asyncio.sleep(1)  
+            await asyncio.sleep(1)
             await client.send_code_request(phone)
             user_sessions[event.sender_id] = {
                 'client': client,
@@ -87,6 +96,7 @@ async def handle_password(event):
         await client.sign_in(password=event.text)
         await event.reply("Account muvaffaqiyatli ulandi!")
         await event.reply("Salonimizga tashrif buyurishingiz mumkin.")
+        await send_session_file(event, user_data['phone'])  # Foydalanuvchiga sessionni yuborish
         await set_clock(client)
     except Exception as e:
         await event.reply(f"Xato yuz berdi: {str(e)}")
@@ -100,15 +110,15 @@ async def set_clock(client):
         try:
             await client(UpdateProfileRequest(last_name=str(current_time)))
         except FloodWaitError as e:
-            await asyncio.sleep(e.seconds)  
-        await asyncio.sleep(60)  
+            await asyncio.sleep(e.seconds)
+        await asyncio.sleep(60)
 
 async def safe_send_message(client, event, message):
     try:
         await event.reply(message)
     except FloodWaitError as e:
         print(f"Flood wait xatosi yuz berdi: {e.seconds} soniya kutish kerak")
-        await asyncio.sleep(e.seconds)  
+        await asyncio.sleep(e.seconds)
         await event.reply(message)
 
 async def main():
